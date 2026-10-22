@@ -1,9 +1,11 @@
 #include "save.h"
 
+#include <codecvt>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <locale>
 #include <system_error>
 
 namespace fs = std::filesystem;
@@ -19,7 +21,13 @@ uint16_t ReadU16(const std::vector<uint8_t>& d, uint32_t off) {
 void WriteU16(std::vector<uint8_t>& d, uint32_t off, uint16_t v) {
     if (off + 2 <= d.size()) std::memcpy(d.data() + off, &v, 2);
 }
-fs::path NativePath(const std::wstring& value) { return fs::path(value); }
+fs::path NativePath(const std::wstring& value) {
+    // POSIX std::filesystem::path does not reliably accept wchar_t paths.
+    // Qt supplies Unicode wide strings; convert explicitly to UTF-8 so saves
+    // stored under non-ASCII home-directory or filename paths work on Linux.
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+    return fs::u8path(converter.to_bytes(value));
+}
 }
 
 uint32_t SaveFile::ReadU32(uint32_t off) const {
@@ -28,7 +36,7 @@ uint32_t SaveFile::ReadU32(uint32_t off) const {
     return v;
 }
 void SaveFile::WriteU32(uint32_t off, uint32_t v) {
-    if (off + 4 <= data.size()) std::memcpy(data.data() + off, &v, 4);
+    if (off + 4 <= data.size()) std::memcpy(&v, data.data() + off, 4);
 }
 void SaveFile::WriteU8(uint32_t off, uint8_t v) {
     if (off < data.size()) data[off] = v;
@@ -60,7 +68,6 @@ bool SaveFile::Load(const std::wstring& file, std::wstring& error) {
     return true;
 }
 bool SaveFile::Save(const std::wstring& file, std::wstring& error) {
-    WriteU32(8, ComputeChecksum());
     const fs::path target = NativePath(file);
     std::error_code ec;
     if (backedUpPath_ != file && fs::exists(target, ec)) {
@@ -69,25 +76,31 @@ bool SaveFile::Save(const std::wstring& file, std::wstring& error) {
         fs::copy_file(target, backup, fs::copy_options::overwrite_existing, ec);
         if (ec) { error = L"Could not create backup file."; return false; }
     }
-    backedUpPath_ = file;
     fs::path temp = target;
     temp += ".tmp";
     {
         std::ofstream out(temp, std::ios::binary | std::ios::trunc);
         if (!out) { error = L"Could not write temporary save file."; return false; }
+        // Calculate checksum on the in-memory save and place it in the output
+        // buffer only after the backup has been created successfully.
+        WriteU32(8, ComputeChecksum());
         out.write(reinterpret_cast<const char*>(data.data()), static_cast<std::streamsize>(data.size()));
-        if (!out) { error = L"Could not finish writing temporary save file."; return false; }
+        if (!out) {
+            out.close();
+            fs::remove(temp, ec);
+            error = L"Could not finish writing temporary save file.";
+            return false;
+        }
     }
+    // On POSIX, rename within the same directory atomically replaces the
+    // destination. Never delete the original as a fallback if rename fails.
     fs::rename(temp, target, ec);
     if (ec) {
-        // POSIX rename replaces an existing file atomically; remove-and-rename is
-        // a fallback for filesystems whose implementation rejects replacement.
-        std::error_code removeError;
-        fs::remove(target, removeError);
-        ec.clear();
-        fs::rename(temp, target, ec);
+        fs::remove(temp);
+        error = L"Could not replace the save file.";
+        return false;
     }
-    if (ec) { fs::remove(temp); error = L"Could not replace the save file."; return false; }
+    backedUpPath_ = file;
     path = file;
     dirty = false;
     return true;
