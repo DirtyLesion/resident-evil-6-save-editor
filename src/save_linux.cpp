@@ -36,7 +36,14 @@ uint32_t SaveFile::ReadU32(uint32_t off) const {
     return v;
 }
 void SaveFile::WriteU32(uint32_t off, uint32_t v) {
-    if (off + 4 <= data.size()) std::memcpy(&v, data.data() + off, 4);
+    const std::size_t index = static_cast<std::size_t>(off);
+    if (index > data.size() || data.size() - index < sizeof(v)) return;
+
+    // The save format is explicitly little-endian; do not depend on host byte order.
+    data[index] = static_cast<uint8_t>(v & 0xFFu);
+    data[index + 1] = static_cast<uint8_t>((v >> 8) & 0xFFu);
+    data[index + 2] = static_cast<uint8_t>((v >> 16) & 0xFFu);
+    data[index + 3] = static_cast<uint8_t>((v >> 24) & 0xFFu);
 }
 void SaveFile::WriteU8(uint32_t off, uint8_t v) {
     if (off < data.size()) data[off] = v;
