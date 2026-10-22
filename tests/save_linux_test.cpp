@@ -87,11 +87,20 @@ int main() {
     save.Set(skillPoints, 12345);
     const int64_t inMemorySkillPoints = save.Get(skillPoints);
     if (inMemorySkillPoints != 12345) {
+        uint32_t rawInMemory = 0;
+        std::memcpy(&rawInMemory, save.data.data() + skillPoints.offset, sizeof(rawInMemory));
         std::cerr << "After Set: value=" << inMemorySkillPoints
+                  << ", raw=" << rawInMemory
+                  << ", data.size=" << save.data.size()
                   << ", offset=" << skillPoints.offset
                   << ", type=" << static_cast<int>(skillPoints.type)
                   << ", readOnly=" << skillPoints.readOnly
-                  << ", dirty=" << save.dirty << '\\n';
+                  << ", dirty=" << static_cast<int>(save.dirty) << '\\n';
+        save.WriteU32(skillPoints.offset, 54321);
+        uint32_t rawAfterDirectWrite = 0;
+        std::memcpy(&rawAfterDirectWrite, save.data.data() + skillPoints.offset, sizeof(rawAfterDirectWrite));
+        std::cerr << "After direct WriteU32: Get=" << save.Get(skillPoints)
+                  << ", raw=" << rawAfterDirectWrite << '\\n';
         return 1;
     }
     if (!Check(save.dirty, "mark save dirty after field update")) return 1;
