@@ -120,7 +120,7 @@ private:
     QTableWidget* table_ = nullptr;
     QPushButton* saveButton_ = nullptr;
     QPushButton* saveAsButton_ = nullptr;
-    int currentPage_ = -1;
+    int currentPage_ = 0;
 
     void buildTree() {
         std::map<QString, QTreeWidgetItem*> nodes;
