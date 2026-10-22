@@ -18,7 +18,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build qt6-base-dev libfuse2 xvfb
+          sudo apt-get install -y build-essential cmake ninja-build qt6-base-dev qt6-wayland libfuse2 xvfb
       - name: Configure and build
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
@@ -32,6 +32,7 @@ jobs:
       - name: Package and smoke-test AppImage
         env:
           LINUXDEPLOY_OUTPUT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'continuous' }}
+          EXTRA_PLATFORM_PLUGINS: libqwayland-egl.so;libqwayland-generic.so
         run: |
           export PATH="$PWD:$PATH"
           export QMAKE=/usr/lib/qt6/bin/qmake
@@ -40,13 +41,21 @@ jobs:
           test -s "$LDAI_OUTPUT"
           chmod +x "$LDAI_OUTPUT"
 
+          # Verify both X11/XCB and native Wayland plugins are bundled.
+          test -f AppDir/usr/plugins/platforms/libqxcb.so
+          test -f AppDir/usr/plugins/platforms/libqwayland-egl.so
+          test -f AppDir/usr/plugins/platforms/libqwayland-generic.so
+
           # Validate the Type 2 runtime can extract the image and that the
-          # bundled Qt/XCB application launches in a headless CI display.
+          # bundled application launches in a headless CI display.
           mkdir appimage-smoke-test
           cd appimage-smoke-test
           "$LDAI_OUTPUT" --appimage-extract
           test -x squashfs-root/AppRun
           test -x squashfs-root/usr/bin/RE6SaveEditor
+          test -f squashfs-root/usr/plugins/platforms/libqxcb.so
+          test -f squashfs-root/usr/plugins/platforms/libqwayland-egl.so
+          test -f squashfs-root/usr/plugins/platforms/libqwayland-generic.so
           set +e
           xvfb-run -a timeout 5s ./squashfs-root/AppRun
           status=$?
