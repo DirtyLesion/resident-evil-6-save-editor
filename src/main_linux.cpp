@@ -186,27 +186,28 @@ private:
             if (!ok) return;
             for (const auto& e : *f.names) if (qs(e.name) == choice) { next = e.value; break; }
         } else {
-            int64_t lo, hi;
-            FieldRange(f, lo, hi);
             bool ok = false;
-            qlonglong val = QInputDialog::getInt(this, qs(f.name), QStringLiteral("Value"), static_cast<int>(current),
-                                                 static_cast<int>(std::max<int64_t>(lo, -2147483647)),
-                                                 static_cast<int>(std::min<int64_t>(hi, 2147483647)), 1, &ok);
-            if (!ok) return;
-            next = val;
-            if (f.type == FieldType::U32 || f.type == FieldType::Hex32) {
-                bool parsed = false;
-                QString text = QInputDialog::getText(this, qs(f.name), QStringLiteral("Enter decimal or 0x-prefixed hexadecimal value"),
-                                                     QLineEdit::Normal, QString::number(current), &parsed);
-                if (!parsed) return;
-                bool valid = false;
-                qulonglong raw = text.trimmed().startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)
-                    ? text.trimmed().mid(2).toULongLong(&valid, 16) : text.trimmed().toULongLong(&valid, 10);
-                if (!valid || raw > 0xFFFFFFFFull) {
-                    QMessageBox::warning(this, QStringLiteral("Invalid value"), QStringLiteral("Enter a value from 0 to 4294967295."));
-                    return;
+            QString entered = QInputDialog::getText(this, qs(f.name),
+                QStringLiteral("Enter a numeric value (0x prefix for hexadecimal)"),
+                QLineEdit::Normal, QString::number(current), &ok).trimmed();
+            if (!ok || entered.isEmpty()) return;
+            bool valid = false;
+            if (f.type == FieldType::I16) {
+                next = entered.toLongLong(&valid, 0);
+            } else {
+                QString digits = entered;
+                int base = 10;
+                if (digits.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)) {
+                    digits = digits.mid(2);
+                    base = 16;
                 }
-                next = static_cast<int64_t>(raw);
+                qulonglong raw = digits.toULongLong(&valid, base);
+                if (valid && raw <= 0xFFFFFFFFull) next = static_cast<int64_t>(raw);
+                else valid = false;
+            }
+            if (!valid) {
+                QMessageBox::warning(this, QStringLiteral("Invalid value"), QStringLiteral("Enter a valid numeric value."));
+                return;
             }
         }
         int64_t lo, hi;
