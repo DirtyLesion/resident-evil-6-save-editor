@@ -17,6 +17,7 @@ add_executable(RE6SaveEditor
     src/main_linux.cpp
     src/save_linux.cpp
     src/fields.cpp
+    src/steam_save_discovery.cpp
 )
 target_include_directories(RE6SaveEditor PRIVATE src)
 target_link_libraries(RE6SaveEditor PRIVATE Qt6::Widgets)
@@ -31,6 +32,14 @@ if(BUILD_TESTING)
     target_include_directories(RE6SaveFileTests PRIVATE src)
     target_compile_options(RE6SaveFileTests PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME linux-save-roundtrip COMMAND RE6SaveFileTests)
+
+    add_executable(RE6SteamSaveDiscoveryTests
+        tests/steam_save_discovery_test.cpp
+        src/steam_save_discovery.cpp
+    )
+    target_compile_options(RE6SteamSaveDiscoveryTests PRIVATE -Wall -Wextra -Wpedantic)
+    target_link_libraries(RE6SteamSaveDiscoveryTests PRIVATE Qt6::Core)
+    add_test(NAME steam-save-auto-detect COMMAND RE6SteamSaveDiscoveryTests)
 
     if(RE6_SAVE_FIXTURE)
         if(NOT EXISTS "${RE6_SAVE_FIXTURE}")
