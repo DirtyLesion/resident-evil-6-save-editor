@@ -31,7 +31,7 @@ The Open dialog looks for `savedata.bin` in common Steam userdata locations for 
 For a custom Steam installation, run the AppImage with the Steam root set explicitly, for example:
 
 ```sh
-STEAM_DIR="/path/to/Steam" ./RE6SaveEditor-v1.0.0-x86_64.AppImage
+STEAM_DIR="/path/to/Steam" ./RE6SaveEditor-*-x86_64.AppImage
 ```
 
 The Linux version edits unencrypted Resident Evil 6 PC/Steam saves. It recalculates the checksum when saving and creates a `.bak` backup beside the original save on the first save to that path in the session. Console saves and encrypted saves are not supported.
