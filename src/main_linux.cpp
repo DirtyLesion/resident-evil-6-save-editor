@@ -1,4 +1,6 @@
 #include <QApplication>
+#include <QDialog>
+#include <QDir>
 #include <QComboBox>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -27,6 +29,7 @@
 
 #include "fields.h"
 #include "save.h"
+#include "steam_save_discovery.h"
 
 namespace {
 QString qs(const std::wstring& s) { return QString::fromStdWString(s); }
@@ -230,8 +233,33 @@ private:
             if (answer == QMessageBox::Cancel) return;
             if (answer == QMessageBox::Save && !saveFile(false)) return;
         }
-        QString file = QFileDialog::getOpenFileName(this, QStringLiteral("Open Resident Evil 6 save"),
-                                                    QString(), QStringLiteral("RE6 save (savedata*.bin);;All files (*)"));
+        const QStringList detectedSaves = FindResidentEvil6SaveCandidates(
+            QDir::homePath(), qEnvironmentVariable("XDG_DATA_HOME"),
+            qEnvironmentVariable("STEAM_DIR"));
+        const bool hasDetectedSave = !detectedSaves.isEmpty();
+        const QString initialDirectory = hasDetectedSave
+            ? QFileInfo(detectedSaves.front()).absolutePath()
+            : QDir::homePath();
+
+        QFileDialog dialog(this,
+            hasDetectedSave
+                ? QStringLiteral("Open Resident Evil 6 save — detected path pre-filled")
+                : QStringLiteral("Open Resident Evil 6 save"),
+            initialDirectory,
+            QStringLiteral("RE6 save (savedata*.bin);;All files (*)"));
+        dialog.setFileMode(QFileDialog::ExistingFile);
+        if (hasDetectedSave) {
+            // Pre-fill the detected filename, but leave confirmation to the user.
+            dialog.selectFile(QFileInfo(detectedSaves.front()).fileName());
+            statusBar()->showMessage(
+                QStringLiteral("Found %1 possible Steam save(s); the most recently modified is preselected. Confirm it or choose another file.")
+                    .arg(detectedSaves.size()));
+        } else {
+            statusBar()->showMessage(
+                QStringLiteral("No Steam save was detected automatically. Choose savedata.bin manually."));
+        }
+        if (dialog.exec() != QDialog::Accepted) return;
+        const QString file = dialog.selectedFiles().value(0);
         if (file.isEmpty()) return;
         std::wstring error;
         if (!save_.Load(file.toStdWString(), error)) {
