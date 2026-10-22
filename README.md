@@ -14,3 +14,18 @@ Grab `RE6SaveEditor-<version>-win64.zip` from the [Releases](../../releases) pag
 It's a single portable exe with no installer and no runtime dependencies (Windows 10 or later).
 
 Or just compile it from source yourself.
+
+## Linux (AppImage)
+
+A native Qt-based Linux build is provided alongside the Windows version. The AppImage build is produced by GitHub Actions and does not require Wine.
+
+- Download the latest successful **RE6SaveEditor-AppImage** artifact from [GitHub Actions](../../actions/workflows/linux-appimage.yml) while the build is in progress.
+- Tagged releases automatically attach an `.AppImage` file to the GitHub release.
+- Make the downloaded file executable and run it:
+
+```sh
+chmod +x RE6SaveEditor-*-x86_64.AppImage
+./RE6SaveEditor-*-x86_64.AppImage
+```
+
+The Linux version edits unencrypted Resident Evil 6 PC/Steam `savedata.bin` files. It recalculates the checksum when saving and creates a `.bak` backup beside the original save on the first save to that path in the session. Console saves and encrypted saves are not supported.
