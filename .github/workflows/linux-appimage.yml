@@ -74,17 +74,43 @@ jobs:
 
   # Keep release write access separate from the build that executes downloaded
   # packaging tools; this job only uploads the already-built artifact.
+  # The explicit release commit is used only for the first release; subsequent releases use tags.
   release:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'Release v1.0.0')
     needs: appimage
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/download-artifact@v8
         with:
           name: RE6SaveEditor-AppImage
-      - name: Attach AppImage to GitHub release
+      - name: Include the existing Windows package in the first release
+        if: env.RELEASE_TAG == 'v1.0.0'
+        run: |
+          test -s release/RE6SaveEditor-v1.0.0-win64.zip
+          cp release/RE6SaveEditor-v1.0.0-win64.zip .
+      - name: Version AppImage for the release
+        run: |
+          if [ -f RE6SaveEditor-continuous-x86_64.AppImage ]; then
+            mv RE6SaveEditor-continuous-x86_64.AppImage "RE6SaveEditor-${RELEASE_TAG}-x86_64.AppImage"
+          fi
+          test -s "RE6SaveEditor-${RELEASE_TAG}-x86_64.AppImage"
+      - name: Publish GitHub release with AppImage
         uses: softprops/action-gh-release@v3
         with:
-          files: RE6SaveEditor-*.AppImage
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: RE6 Save Editor ${{ env.RELEASE_TAG }}
+          body_path: release/${{ env.RELEASE_TAG }}.md
+          body: |
+            First public release of the native Linux Qt 6 AppImage alongside the original Windows version.
+            The default CI tests use synthetic data. Personal savedata.bin files are not included.
+          files: |
+            RE6SaveEditor-*.AppImage
+            RE6SaveEditor-*-win64.zip

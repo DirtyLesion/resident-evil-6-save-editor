@@ -9,6 +9,10 @@ include(CTest)
 find_package(Qt6 6.3 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()
 
+# Personal savedata.bin files are private user data and must not be committed.
+# Set this to a local fixture path to enable the additional real-save regression.
+set(RE6_SAVE_FIXTURE "" CACHE FILEPATH "Optional local Resident Evil 6 savedata.bin for regression testing")
+
 add_executable(RE6SaveEditor
     src/main_linux.cpp
     src/save_linux.cpp
@@ -27,6 +31,23 @@ if(BUILD_TESTING)
     target_include_directories(RE6SaveFileTests PRIVATE src)
     target_compile_options(RE6SaveFileTests PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME linux-save-roundtrip COMMAND RE6SaveFileTests)
+
+    if(RE6_SAVE_FIXTURE)
+        if(NOT EXISTS "${RE6_SAVE_FIXTURE}")
+            message(FATAL_ERROR "RE6_SAVE_FIXTURE was set but the file does not exist: ${RE6_SAVE_FIXTURE}")
+        endif()
+        add_executable(RE6RealSaveFileTests
+            tests/real_save_test.cpp
+            src/save_linux.cpp
+            src/fields.cpp
+        )
+        target_include_directories(RE6RealSaveFileTests PRIVATE src)
+        target_compile_options(RE6RealSaveFileTests PRIVATE -Wall -Wextra -Wpedantic)
+        add_test(
+            NAME linux-real-save-regression
+            COMMAND RE6RealSaveFileTests "${RE6_SAVE_FIXTURE}"
+        )
+    endif()
 endif()
 
 install(TARGETS RE6SaveEditor RUNTIME DESTINATION bin)
