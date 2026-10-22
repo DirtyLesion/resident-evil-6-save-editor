@@ -76,13 +76,13 @@ jobs:
   # packaging tools; this job only uploads the already-built artifact.
   # The explicit release commit is used only for the first release; subsequent releases use tags.
   release:
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.head_commit.message == 'Release v1.0.0')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && (github.event.head_commit.message == 'Release v1.0.0' || github.event.head_commit.message == 'Release v1.0.1'))
     needs: appimage
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
-      RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}
+      RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || (github.event.head_commit.message == 'Release v1.0.1' && 'v1.0.1') || 'v1.0.0' }}
     steps:
       - uses: actions/checkout@v7
         with:
