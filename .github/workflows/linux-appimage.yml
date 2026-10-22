@@ -23,6 +23,7 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
           cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
           DESTDIR="$PWD/AppDir" cmake --install build
       - name: Install linuxdeploy
         run: |
