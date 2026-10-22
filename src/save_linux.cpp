@@ -70,12 +70,22 @@ bool SaveFile::Load(const std::wstring& file, std::wstring& error) {
 bool SaveFile::Save(const std::wstring& file, std::wstring& error) {
     const fs::path target = NativePath(file);
     std::error_code ec;
-    if (backedUpPath_ != file && fs::exists(target, ec)) {
+
+    // If checking the destination fails, abort instead of potentially
+    // replacing a file without first creating the promised backup.
+    const bool targetExists = fs::exists(target, ec);
+    if (ec) {
+        error = L"Could not inspect the save destination.";
+        return false;
+    }
+    if (backedUpPath_ != file && targetExists) {
         fs::path backup = target;
         backup += ".bak";
+        ec.clear();
         fs::copy_file(target, backup, fs::copy_options::overwrite_existing, ec);
         if (ec) { error = L"Could not create backup file."; return false; }
     }
+
     fs::path temp = target;
     temp += ".tmp";
     {
