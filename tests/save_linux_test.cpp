@@ -85,7 +85,15 @@ int main() {
     if (!Check(save.Get(skillPoints) == 0, "read initial Skill points value")) return 1;
 
     save.Set(skillPoints, 12345);
-    if (!Check(save.Get(skillPoints) == 12345, "update Skill points in memory")) return 1;
+    const int64_t inMemorySkillPoints = save.Get(skillPoints);
+    if (inMemorySkillPoints != 12345) {
+        std::cerr << "After Set: value=" << inMemorySkillPoints
+                  << ", offset=" << skillPoints.offset
+                  << ", type=" << static_cast<int>(skillPoints.type)
+                  << ", readOnly=" << skillPoints.readOnly
+                  << ", dirty=" << save.dirty << '\\n';
+        return 1;
+    }
     if (!Check(save.dirty, "mark save dirty after field update")) return 1;
     if (!Check(save.Save(sourceWide, error), "save edited file")) {
         std::wcerr << L"Save error: " << error << L'\n';
