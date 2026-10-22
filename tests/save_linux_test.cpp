@@ -85,24 +85,7 @@ int main() {
     if (!Check(save.Get(skillPoints) == 0, "read initial Skill points value")) return 1;
 
     save.Set(skillPoints, 12345);
-    const int64_t inMemorySkillPoints = save.Get(skillPoints);
-    if (inMemorySkillPoints != 12345) {
-        uint32_t rawInMemory = 0;
-        std::memcpy(&rawInMemory, save.data.data() + skillPoints.offset, sizeof(rawInMemory));
-        std::cerr << "After Set: value=" << inMemorySkillPoints
-                  << ", raw=" << rawInMemory
-                  << ", data.size=" << save.data.size()
-                  << ", offset=" << skillPoints.offset
-                  << ", type=" << static_cast<int>(skillPoints.type)
-                  << ", readOnly=" << skillPoints.readOnly
-                  << ", dirty=" << static_cast<int>(save.dirty) << '\\n';
-        save.WriteU32(skillPoints.offset, 54321);
-        uint32_t rawAfterDirectWrite = 0;
-        std::memcpy(&rawAfterDirectWrite, save.data.data() + skillPoints.offset, sizeof(rawAfterDirectWrite));
-        std::cerr << "After direct WriteU32: Get=" << save.Get(skillPoints)
-                  << ", raw=" << rawAfterDirectWrite << '\\n';
-        return 1;
-    }
+    if (!Check(save.Get(skillPoints) == 12345, "update Skill points in memory")) return 1;
     if (!Check(save.dirty, "mark save dirty after field update")) return 1;
     if (!Check(save.Save(sourceWide, error), "save edited file")) {
         std::wcerr << L"Save error: " << error << L'\n';
@@ -116,21 +99,16 @@ int main() {
     const std::vector<uint8_t> editedBytes = ReadBytes(sourcePath);
     if (!Check(editedBytes.size() == kTestSaveSize, "preserve save file size")) return 1;
     uint32_t rawWrittenSkillPoints = 0;
-    if (editedBytes.size() >= skillPoints.offset + sizeof(rawWrittenSkillPoints))
-        std::memcpy(&rawWrittenSkillPoints, editedBytes.data() + skillPoints.offset, sizeof(rawWrittenSkillPoints));
-    std::cout << "Raw saved Skill points word: " << rawWrittenSkillPoints << '\\n';
+    std::memcpy(&rawWrittenSkillPoints, editedBytes.data() + skillPoints.offset,
+                sizeof(rawWrittenSkillPoints));
+    if (!Check(rawWrittenSkillPoints == 12345, "persist field bytes to disk")) return 1;
 
     SaveFile reloaded;
     if (!Check(reloaded.Load(sourceWide, error), "reload edited save")) {
         std::wcerr << L"Reload error: " << error << L'\n';
         return 1;
     }
-    const int64_t reloadedSkillPoints = reloaded.Get(skillPoints);
-    if (reloadedSkillPoints != 12345) {
-        std::cerr << "Expected 12345 after reload, got " << reloadedSkillPoints
-                  << "; raw saved word was " << rawWrittenSkillPoints << '\\n';
-        return 1;
-    }
+    if (!Check(reloaded.Get(skillPoints) == 12345, "persist edited Skill points value")) return 1;
     if (!Check(reloaded.StoredChecksum() == reloaded.ComputeChecksum(),
                "stored checksum matches recomputed checksum")) return 1;
     if (!Check(!reloaded.dirty, "loaded save starts clean")) return 1;
