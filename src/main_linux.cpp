@@ -1,6 +1,10 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QFileDialog>
+#include <QFileInfo>
+#include <QLineEdit>
+#include <QAbstractItemView>
+#include <QStringList>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QLabel>
