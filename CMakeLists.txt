@@ -37,6 +37,7 @@ if(BUILD_TESTING)
         tests/steam_save_discovery_test.cpp
         src/steam_save_discovery.cpp
     )
+    target_include_directories(RE6SteamSaveDiscoveryTests PRIVATE src)
     target_compile_options(RE6SteamSaveDiscoveryTests PRIVATE -Wall -Wextra -Wpedantic)
     target_link_libraries(RE6SteamSaveDiscoveryTests PRIVATE Qt6::Core)
     add_test(NAME steam-save-auto-detect COMMAND RE6SteamSaveDiscoveryTests)
