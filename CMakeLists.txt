@@ -27,6 +27,18 @@ if(BUILD_TESTING)
     target_include_directories(RE6SaveFileTests PRIVATE src)
     target_compile_options(RE6SaveFileTests PRIVATE -Wall -Wextra -Wpedantic)
     add_test(NAME linux-save-roundtrip COMMAND RE6SaveFileTests)
+
+    add_executable(RE6RealSaveFileTests
+        tests/real_save_test.cpp
+        src/save_linux.cpp
+        src/fields.cpp
+    )
+    target_include_directories(RE6RealSaveFileTests PRIVATE src)
+    target_compile_options(RE6RealSaveFileTests PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(
+        NAME linux-real-save-regression
+        COMMAND RE6RealSaveFileTests "${CMAKE_CURRENT_SOURCE_DIR}/tests/savedata.bin"
+    )
 endif()
 
 install(TARGETS RE6SaveEditor RUNTIME DESTINATION bin)
