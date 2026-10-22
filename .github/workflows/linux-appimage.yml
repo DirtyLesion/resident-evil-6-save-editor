@@ -29,18 +29,38 @@ jobs:
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
           wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage -O linuxdeploy-plugin-qt
           chmod +x linuxdeploy linuxdeploy-plugin-qt
-      - name: Package AppImage
+      - name: Package and smoke-test AppImage
         env:
-          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'continuous' }}
+          LINUXDEPLOY_OUTPUT_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'continuous' }}
         run: |
           export PATH="$PWD:$PATH"
           export QMAKE=/usr/lib/qt6/bin/qmake
+          export LDAI_OUTPUT="$PWD/RE6SaveEditor-${LINUXDEPLOY_OUTPUT_VERSION}-x86_64.AppImage"
           ./linuxdeploy --appdir AppDir --plugin qt --output appimage
-          mv *_x86_64.AppImage "RE6SaveEditor-${VERSION}-x86_64.AppImage"
+          test -s "$LDAI_OUTPUT"
+          chmod +x "$LDAI_OUTPUT"
+
+          # Verify the Type 2 runtime can extract the finished image and that
+          # the bundled entry point launches in a headless CI environment.
+          mkdir appimage-smoke-test
+          cd appimage-smoke-test
+          "$LDAI_OUTPUT" --appimage-extract
+          test -x squashfs-root/AppRun
+          test -x squashfs-root/usr/bin/RE6SaveEditor
+          set +e
+          QT_QPA_PLATFORM=offscreen timeout 5s ./squashfs-root/AppRun
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            echo "AppImage smoke test failed with exit code $status"
+            exit "$status"
+          fi
+          cd ..
       - uses: actions/upload-artifact@v4
         with:
           name: RE6SaveEditor-AppImage
           path: RE6SaveEditor-*.AppImage
+          if-no-files-found: error
       - name: Attach AppImage to GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
