@@ -36,7 +36,7 @@ jobs:
           export PATH="$PWD:$PATH"
           export QMAKE=/usr/lib/qt6/bin/qmake
           ./linuxdeploy --appdir AppDir --plugin qt --output appimage
-          mv RE6SaveEditor-*.AppImage "RE6SaveEditor-${VERSION}-x86_64.AppImage"
+          mv *_x86_64.AppImage "RE6SaveEditor-${VERSION}-x86_64.AppImage"
       - uses: actions/upload-artifact@v4
         with:
           name: RE6SaveEditor-AppImage
